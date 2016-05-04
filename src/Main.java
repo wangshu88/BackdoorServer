@@ -10,54 +10,70 @@ public class Main {
     private static BufferedReader in;
     private static PrintWriter out;
 
-    public static void main(String[] args) throws IOException, InterruptedException {
-        if (!CreateServerSocket()) main(args);
-        if (!WaitingForClient()) {
-            Thread.sleep(5000);
-            return;
+    public static void main(String[] args) throws InterruptedException {
+        while (serverSocket == null) {
+            CreateServerSocket();
+            Thread.sleep(2000);
         }
+//        if (!WaitingForClient()) {
+//            Thread.sleep(2000);
+//            main(args);
+//        }
+        while (true) {
+            if (connected)
+                try {
+                    Exchange();
+                } catch (IOException e) {
+                    connected = false;
+                    System.out.print("Client disconnected\n");
+                }
+            else
+                WaitingForClient();
+            Thread.sleep(500);
+        }
+    }
 
+    private static void Exchange() throws IOException, InterruptedException {
         InputStream sin = fromClient.getInputStream();
         OutputStream sout = fromClient.getOutputStream();
 
+//        ObjectInputStream in = new ObjectInputStream(sin);
+        ObjectOutputStream out = new ObjectOutputStream(sout);
+
         DataInputStream in = new DataInputStream(sin);
-        DataOutputStream out = new DataOutputStream(sout);
+//        DataOutputStream out = new DataOutputStream(sout);
 
         String line = null;
         while (connected) {
             line = in.readUTF();
-            System.out.println("The dumb client just sent me this line : " + line);
-            System.out.println("I'm sending it back...");
+            System.out.println("Client message: " + line);
 
-            CheckCommand(line);
-            
-            out.writeUTF(line); // отсылаем клиенту обратно ту самую строку текста.
+            Object object = CheckCommand(line);
+
+            out.writeObject(object); // отсылаем клиенту обратно ту самую строку текста.
             out.flush(); // заставляем поток закончить передачу данных.
             System.out.println("Waiting for the next line...");
             System.out.println();
-//            Thread.sleep(1000);
         }
-
-        serverSocket.close();
     }
 
-    private static Object CheckCommand(String line, Object ... args) {
-        switch (line) {
+    private static Object CheckCommand(String line) {
+        String[] args = line.split("\\|");
+        switch (args[0]) {
             case "TEST":
                 return "test done!";
-                break;
             case "EXIT":
                 System.exit(0);
                 break;
             case "TREE": //Gets only one string argument (Path)
-                GetFileTree(args);
-                break;
+                return GetFileTree(args);
         }
+        return null;
     }
 
-    private static void GetFileTree(Object ... args) {
-        String path = (String) args[0];
-
+    private static String[] GetFileTree(String[] args) {
+        String path = (String) args[1];
+        return Filewalker.walk(path);
     }
 
     private static boolean WaitingForClient() {
