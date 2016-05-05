@@ -7,10 +7,6 @@ public class Filewalker {
         if (!root.isDirectory())
             return null;
         File[] list = root.listFiles();
-//        String[] listNames = new String[list.length];
-//        for (int i = 0; i < list.length; i++) {
-//            listNames[i] = list[i].getName();
-//        }
         return list;
     }
 }

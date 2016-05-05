@@ -100,10 +100,10 @@ public class Main {
         }
     }
 
-    private static void Exchange() throws IOException, InterruptedException {
-        InputStream sin = fromClient.getInputStream();
-        OutputStream sout = fromClient.getOutputStream();
+    static InputStream sin;
+    static OutputStream sout;
 
+    private static void Exchange() throws IOException, InterruptedException {
         ObjectOutputStream out = new ObjectOutputStream(sout);
         DataInputStream in = new DataInputStream(sin);
 
@@ -116,16 +116,15 @@ public class Main {
         out.writeObject(object); // отсылаем клиенту обратно ту самую строку текста.
         out.flush(); // заставляем поток закончить передачу данных.
 
-        sin.close();
-        sout.close();
-        in.close();
-        out.close();
         System.out.println("Waiting for the next line...");
     }
 
     private static Object CheckCommand(String line) {
-        String[] args = line.split("\\|");
-        switch (args[0]) {
+        String[] command = line.split("\\|");
+        String[] args = new String[command.length-1];
+        System.arraycopy(command, 1, args, 0, args.length);
+
+        switch (command[0]) {
             case "TEST":
                 return "Test done!";
             case "EXIT":
@@ -141,14 +140,12 @@ public class Main {
     }
 
     private static String[] ExecuteCMD(String ... command) {
-        String[] args = new String[command.length-1];
-        System.arraycopy(command, 1, args, 0, args.length);
         //CMD function
-        return args;
+        return null;
     }
 
     private static File[] GetFileTree(String[] args) {
-        String path = args[1];
+        String path = args[0];
         return Filewalker.walk(path);
     }
 
@@ -156,6 +153,8 @@ public class Main {
         try {
             System.out.print("Waiting for a client...\n");
             fromClient = serverSocket.accept();
+            sin = fromClient.getInputStream();
+            sout = fromClient.getOutputStream();
             System.out.print("Client connected\n");
         } catch (IOException e) {
             System.out.print("Can't accept\n");
