@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="BackdoorServer:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/BackdoorServer_jar</output-path>
+    <root id="archive" name="BackdoorServer.jar">
+      <element id="module-output" name="BackdoorServer" />
+    </root>
+  </artifact>
+</component>

@@ -5,11 +5,14 @@ public class Main {
 
     private static boolean connected = false;
     private static boolean internet = false;
+    private static boolean posting = true;
     private static boolean running = true;
 
     private static ServerSocket serverSocket = null;
     private static Socket fromClient = null;
     private static String externalIP;
+
+    private static int[] portList = new int[]{9999,8888,6666,10000};
 
     private static String domainName = "remoteserver.anondns.net";
     private static String key = "f8ebf7d46abe08f46e9022acd4b96422";
@@ -34,7 +37,7 @@ public class Main {
             Thread IPPostingThread = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    while (true) {
+                    while (posting) {
                         SendIPToServer();
                         try {
                             Thread.sleep(10000);
@@ -79,7 +82,6 @@ public class Main {
     }
 
     private static void SendIPToServer() {
-
         String endUrl = "http://anondns.net/api/set/" + domainName + "/" + key;
         HttpURLConnection connection;
         try {
@@ -106,17 +108,19 @@ public class Main {
         DataInputStream in = new DataInputStream(sin);
 
         String line;
-        while (connected) {
-            line = in.readUTF();
-            System.out.println("Client message: " + line);
+        line = in.readUTF();
+        System.out.println("Client message: " + line);
 
-            Object object = CheckCommand(line);
+        Object object = CheckCommand(line);
 
-            out.writeObject(object); // отсылаем клиенту обратно ту самую строку текста.
-            out.flush(); // заставляем поток закончить передачу данных.
-            System.out.println("Waiting for the next line...");
-            System.out.println();
-        }
+        out.writeObject(object); // отсылаем клиенту обратно ту самую строку текста.
+        out.flush(); // заставляем поток закончить передачу данных.
+
+        sin.close();
+        sout.close();
+        in.close();
+        out.close();
+        System.out.println("Waiting for the next line...");
     }
 
     private static Object CheckCommand(String line) {
@@ -143,7 +147,7 @@ public class Main {
         return args;
     }
 
-    private static String[] GetFileTree(String[] args) {
+    private static File[] GetFileTree(String[] args) {
         String path = args[1];
         return Filewalker.walk(path);
     }
@@ -161,8 +165,22 @@ public class Main {
         return true;
     }
 
-    private static boolean CreateServerSocket() {
+    private static boolean CreateServerSocket() throws InterruptedException {
+
+        boolean availPortExists = false;
         int localPort = 0;
+        do {
+            for (int i = 0; i < 4; i++) {
+                if (CheckPort(portList[i])) {
+                    availPortExists = true;
+                    localPort = portList[i];
+                    break;
+                }
+                else System.out.print("\tPort " + portList[i] + " not available, switching to another...\n");
+            }
+            Thread.sleep(1500);
+        }while (!availPortExists);
+
         try {
             serverSocket = new ServerSocket(localPort);
             localPort = serverSocket.getLocalPort();
@@ -172,5 +190,31 @@ public class Main {
             return false;
         }
         return true;
+    }
+
+    private static boolean CheckPort(int port) {
+        ServerSocket ss = null;
+        DatagramSocket ds = null;
+        try {
+            ss = new ServerSocket(port);
+            ss.setReuseAddress(true);
+            ds = new DatagramSocket(port);
+            ds.setReuseAddress(true);
+            return true;
+        } catch (IOException ignored) {
+        } finally {
+            if (ds != null) {
+                ds.close();
+            }
+
+            if (ss != null) {
+                try {
+                    ss.close();
+                } catch (IOException e) {
+                /* should not be thrown */
+                }
+            }
+        }
+        return false;
     }
 }
